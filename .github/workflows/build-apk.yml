@@ -1,0 +1,64 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: 'Server address to pre-fill in the app (optional), for example https://unison.example.com'
+        required: false
+        default: ''
+  pull_request:
+    paths:
+      - 'unison/android-app/**'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: unison/android-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set the default server address
+        env:
+          SERVER_URL: ${{ inputs.server_url }}
+        run: |
+          node -e "require('fs').writeFileSync('www/config.js', 'window.UNISON_DEFAULT_SERVER = ' + JSON.stringify(process.env.SERVER_URL || '') + ';\n')"
+
+      - name: Create the Android project
+        run: npx cap add android
+
+      - name: Allow plain-HTTP servers on the local network
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          grep -q usesCleartextTraffic "$MANIFEST" || sed -i 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
+          grep -n usesCleartextTraffic "$MANIFEST"
+
+      - name: Sync web files into the project
+        run: npx cap sync android
+
+      - name: Build the debug APK
+        working-directory: unison/android-app/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: unison-debug-apk
+          path: unison/android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
