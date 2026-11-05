@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#E6ECF1">
+  <title>Unison</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2316213a' stroke-width='3'/%3E%3Ccircle cx='16' cy='5' r='4' fill='%23e8481f'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Lobby -->
+  <main id="lobby" class="lobby">
+    <section class="lobby-copy">
+      <p class="brand">Unison</p>
+      <h1>Many phones.<br>One speaker.</h1>
+      <p class="lede">Open the same room on every device, add songs, press play. Each device plays the song at the same moment, so a table of phones sounds like one big speaker.</p>
+    </section>
+
+    <form id="joinForm" class="join" autocomplete="off" novalidate>
+      <label for="nameInput">Your name</label>
+      <input id="nameInput" name="name" maxlength="24" required>
+
+      <label for="codeInput">Room code</label>
+      <input id="codeInput" name="code" maxlength="8" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="For example K7M2Q">
+
+      <p id="lobbyError" class="form-error" role="alert" hidden></p>
+
+      <div class="join-actions">
+        <button type="submit" class="btn btn-primary" id="joinBtn">Join room</button>
+        <button type="button" class="btn btn-quiet" id="createBtn">Start a new room</button>
+      </div>
+    </form>
+  </main>
+
+  <!-- Room -->
+  <div id="room" class="room" hidden>
+    <header class="room-bar">
+      <p class="brand">Unison</p>
+      <div class="room-id">
+        <span class="room-id-label">Room</span>
+        <strong id="roomCode" class="room-code">-----</strong>
+        <button type="button" class="btn btn-small" id="copyBtn">Copy invite link</button>
+      </div>
+      <button type="button" class="btn btn-small btn-quiet" id="leaveBtn">Leave room</button>
+    </header>
+
+    <div id="soundGate" class="sound-gate" role="alert" hidden>
+      <p>Your browser is holding back the sound.</p>
+      <button type="button" class="btn btn-primary btn-small" id="soundBtn">Turn on sound</button>
+    </div>
+
+    <div class="room-grid">
+      <section class="stage" aria-label="Now playing">
+        <div class="ring-wrap">
+          <canvas id="ring" aria-hidden="true"></canvas>
+          <div class="ring-center">
+            <p id="nowTitle" class="now-title">Nothing queued yet</p>
+            <p id="nowBy" class="now-by">Add a song to start</p>
+          </div>
+        </div>
+
+        <ul id="members" class="members" aria-label="Devices in this room"></ul>
+
+        <div class="transport">
+          <div class="transport-buttons">
+            <button type="button" class="icon-btn" id="prevBtn" aria-label="Previous song or restart">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9.5 12z" fill="currentColor"/></svg>
+            </button>
+            <button type="button" class="icon-btn icon-btn-main" id="playBtn" aria-label="Play">
+              <svg id="playIcon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+              <svg id="pauseIcon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" hidden><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>
+            </button>
+            <button type="button" class="icon-btn" id="nextBtn" aria-label="Next song">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5l10.5 7L4 19z" fill="currentColor"/></svg>
+            </button>
+          </div>
+
+          <div class="seek">
+            <span id="timeNow" class="time">0:00</span>
+            <input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Playback position" disabled>
+            <span id="timeTotal" class="time">0:00</span>
+          </div>
+
+          <div class="volume">
+            <label for="volume">Volume on this device</label>
+            <input id="volume" type="range" min="0" max="100" value="100">
+          </div>
+
+          <p id="syncStatus" class="sync-status" aria-live="polite">Connecting…</p>
+        </div>
+      </section>
+
+      <section class="queue" aria-label="Songs in this room">
+        <div class="queue-head">
+          <h2>Songs</h2>
+          <button type="button" class="btn btn-primary btn-small" id="addBtn">Add songs</button>
+          <input id="fileInput" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac" multiple hidden>
+        </div>
+
+        <div id="dropzone" class="dropzone">
+          <ol id="queueList" class="queue-list"></ol>
+          <p id="queueEmpty" class="queue-empty">No songs yet. Choose audio files from this device, or drop them here. Everyone in the room can play them.</p>
+        </div>
+
+        <p id="uploadStatus" class="upload-status" aria-live="polite" hidden></p>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
