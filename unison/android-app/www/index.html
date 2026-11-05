@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#E6ECF1">
+  <title>Unison</title>
+  <style>
+    :root {
+      --paper: #e6ecf1;
+      --panel: #f8fafc;
+      --ink: #16213a;
+      --mute: #5a6880;
+      --line: #c3cedb;
+      --signal: #e8481f;
+      --focus: #2b5cff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      align-content: center;
+      gap: 1.5rem;
+      padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+      background: var(--paper);
+      color: var(--ink);
+      font: 400 1rem/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    main { width: 100%; max-width: 28rem; margin: 0 auto; display: grid; gap: 1.5rem; }
+    h1 { margin: 0; font-size: 2.5rem; line-height: 1; letter-spacing: -0.04em; font-weight: 800; }
+    p { margin: 0; color: var(--mute); }
+    form {
+      background: var(--panel);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      padding: 1.25rem;
+      display: grid;
+      gap: 0.5rem;
+    }
+    label { font-weight: 600; font-size: 0.9rem; }
+    input {
+      font: 500 1.125rem/1.2 inherit;
+      padding: 0.8rem 0.9rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      width: 100%;
+    }
+    input:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    button {
+      margin-top: 0.75rem;
+      font: 600 1rem/1 inherit;
+      padding: 0.9rem 1.25rem;
+      border: 1.5px solid var(--ink);
+      border-radius: 8px;
+      background: var(--ink);
+      color: var(--panel);
+      cursor: pointer;
+    }
+    button:active { background: var(--signal); border-color: var(--signal); }
+    .hint { font-size: 0.875rem; }
+    .hint strong { color: var(--ink); font-weight: 600; }
+    .message { font-weight: 500; font-size: 0.95rem; color: #b3260b; }
+    .message[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Unison</h1>
+      <p>Enter the address of your Unison server to open it in this app.</p>
+    </header>
+
+    <form id="form" novalidate>
+      <label for="server">Server address</label>
+      <input id="server" type="url" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="http://192.168.1.20:3000">
+      <p id="message" class="message" role="alert" hidden></p>
+      <button type="submit" id="open">Open Unison</button>
+    </form>
+
+    <p class="hint">
+      <strong>On your Wi-Fi:</strong> use the "Other devices" address that the server prints when it starts, with this phone on the same Wi-Fi.<br>
+      <strong>On the internet:</strong> use the https address of the site where you host Unison.<br>
+      To change the address later, press the Back button until this screen returns.
+    </p>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    (function () {
+      var KEY = 'unison-server';
+      var input = document.getElementById('server');
+      var message = document.getElementById('message');
+      var button = document.getElementById('open');
+      var warned = false;
+
+      function load() {
+        try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; }
+      }
+      function save(value) {
+        try { localStorage.setItem(KEY, value); } catch (e) { /* ignore */ }
+      }
+
+      // A bare address like 192.168.1.20:3000 gets http://; anything else gets https://.
+      function normalise(raw) {
+        var value = String(raw || '').trim().replace(/\/+$/, '');
+        if (!value) return '';
+        if (!/^https?:\/\//i.test(value)) {
+          var local = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/|$)/i.test(value);
+          value = (local ? 'http://' : 'https://') + value;
+        }
+        return value;
+      }
+
+      function show(text) {
+        message.textContent = text;
+        message.hidden = !text;
+      }
+
+      function checkReachable(url) {
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, 6000);
+        return fetch(url + '/', { mode: 'no-cors', cache: 'no-store', signal: controller.signal })
+          .then(function () { clearTimeout(timer); return true; })
+          .catch(function () { clearTimeout(timer); return false; });
+      }
+
+      input.value = load() || normalise(window.UNISON_DEFAULT_SERVER);
+
+      document.getElementById('form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        var url = normalise(input.value);
+        if (!url) {
+          show('Enter your server address first, for example http://192.168.1.20:3000.');
+          input.focus();
+          return;
+        }
+        input.value = url;
+        save(url);
+
+        if (warned) { window.location.href = url; return; }
+
+        button.disabled = true;
+        button.textContent = 'Checking…';
+        checkReachable(url).then(function (ok) {
+          if (ok) { window.location.href = url; return; }
+          warned = true;
+          button.disabled = false;
+          button.textContent = 'Open anyway';
+          show('Could not reach this address. Check that the server is running and that this phone is on the same Wi-Fi. You can also try opening it anyway.');
+        });
+      });
+
+      input.addEventListener('input', function () {
+        warned = false;
+        button.textContent = 'Open Unison';
+        show('');
+      });
+    })();
+  </script>
+</body>
+</html>

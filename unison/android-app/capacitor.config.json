@@ -1,0 +1,10 @@
+{
+  "appId": "app.unison.rooms",
+  "appName": "Unison",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  }
+}
